@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+# git不追踪不提交这些文件
