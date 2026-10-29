@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlanStatus {
+  DOING
+  DONE
+  DROPPED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  nickname     String   @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  events Event[]
+  plans  Plan[]
+  tags   Tag[]
+
+  @@map("users")
+}
+
+model Event {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  title      String   @db.VarChar(200)
+  content    String?  @db.Text
+  happenedAt DateTime @map("happened_at")
+  category   String?  @db.VarChar(50)
+  importance Int      @default(3) @db.SmallInt
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags EventTag[]
+
+  @@index([userId, happenedAt])
+  @@map("events")
+}
+
+model Tag {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  name      String   @db.VarChar(30)
+  color     String   @default("#2563EB") @db.VarChar(7)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events EventTag[]
+
+  @@unique([userId, name])
+  @@map("tags")
+}
+
+model EventTag {
+  eventId Int @map("event_id")
+  tagId   Int @map("tag_id")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, tagId])
+  @@index([tagId])
+  @@map("event_tags")
+}
+
+model Plan {
+  id          Int         @id @default(autoincrement())
+  userId      Int         @map("user_id")
+  title       String      @db.VarChar(200)
+  description String?     @db.Text
+  startDate   DateTime?   @map("start_date") @db.Date
+  dueDate     DateTime?   @map("due_date") @db.Date
+  status      PlanStatus  @default(DOING)
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps PlanStep[]
+
+  @@index([userId, status])
+  @@map("plans")
+}
+
+model PlanStep {
+  id        Int     @id @default(autoincrement())
+  planId    Int     @map("plan_id")
+  content   String  @db.VarChar(500)
+  isDone    Boolean @default(false) @map("is_done")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, sortOrder])
+  @@map("plan_steps")
+}
